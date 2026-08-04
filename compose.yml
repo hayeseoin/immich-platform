@@ -35,7 +35,7 @@ services:
       disable: false
     networks:
       - platform
-      - external
+      - backend
 
   immich-machine-learning:
     container_name: immich_machine_learning
