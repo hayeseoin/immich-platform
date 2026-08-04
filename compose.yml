@@ -61,8 +61,8 @@ services:
     healthcheck:
       test: redis-cli ping || exit 1
     restart: always
-  networks:
-    - backend
+    networks:
+      - backend
 
   database:
     container_name: immich_postgres
