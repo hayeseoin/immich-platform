@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -u
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# --- Platform-provided environment ---
+source /home/svc-platform/.config/platform/restic.env
+source "$APP_DIR/.env"
+
+TAG="${RESTIC_TAG:-$APP_NAME}"
+BACKUP_TMP="/tmp/backup-${TAG}"
+
+# --- Prepare temp directory ---
+rm -rf "$BACKUP_TMP"
+mkdir -p "$BACKUP_TMP"
+trap 'rm -rf "$BACKUP_TMP"' EXIT
+
+# --- Dump data ---
+if ! docker exec "${APP_NAME}_postgres" pg_dumpall -U postgres > "$BACKUP_TMP/db.sql"; then
+    echo "ERROR: database dump failed" >&2
+    exit 1
+fi
+cp -a "$APP_DIR/library" "$BACKUP_TMP/library"
+
+# --- Back up ---
+if ! restic backup "$BACKUP_TMP" --tag "$TAG"; then
+    echo "ERROR: restic backup failed" >&2
+    exit 1
+fi
+
+# --- Retention ---
+if ! restic forget --keep-daily 7 --keep-weekly 4 --tag "$TAG" --prune; then
+    echo "ERROR: restic forget/prune failed" >&2
+    exit 1
+fi
+
