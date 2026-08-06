@@ -17,7 +17,7 @@ mkdir -p "$BACKUP_TMP"
 trap 'rm -rf "$BACKUP_TMP"' EXIT
 
 # --- Dump data ---
-if ! docker compose -p "${COMPOSE_PROJECT_NAME}" exec "${COMPOSE_PROJECT_NAME}_database" pg_dumpall -U postgres > "$BACKUP_TMP/db.sql"; then
+if ! docker compose -p "${COMPOSE_PROJECT_NAME}" exec database pg_dumpall -U postgres > "$BACKUP_TMP/db.sql"; then
     echo "ERROR: database dump failed" >&2
     exit 1
 fi
