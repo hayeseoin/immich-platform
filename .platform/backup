@@ -9,11 +9,7 @@ source /home/svc-platform/.config/platform/restic.env
 source "$APP_DIR/.env"
 
 TAG="${RESTIC_TAG:-$APP_NAME}"
-BACKUP_TMP="/tmp/backup-${TAG}"
-
-# --- Prepare temp directory ---
-rm -rf "$BACKUP_TMP"
-mkdir -p "$BACKUP_TMP"
+BACKUP_TMP="$(mktemp -d --tmpdir=/var/tmp)"
 trap 'rm -rf "$BACKUP_TMP"' EXIT
 
 # --- Dump data ---
