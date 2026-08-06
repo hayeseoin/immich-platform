@@ -8,8 +8,10 @@ APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 source /home/svc-platform/.config/platform/restic.env
 source "$APP_DIR/.env"
 
-TAG="${RESTIC_TAG:-$APP_NAME}"
-BACKUP_TMP="$(mktemp -d --tmpdir=/var/tmp)"
+# --- Create backup tmp directory --- #
+BACKUP_TMP="/var/tmp/backup-${TAG}"
+rm -rf "$BACKUP_TMP"
+mkdir -p "$BACKUP_TMP"
 trap 'rm -rf "$BACKUP_TMP"' EXIT
 
 # --- Dump data ---
@@ -20,8 +22,7 @@ fi
 cp -a "$APP_DIR/library" "$BACKUP_TMP/library"
 
 # --- Back up ---
-cd "$BACKUP_TMP"
-if ! restic backup . --tag "$TAG"; then
+if ! restic backup "$BACKUP_TMP" --tag "$TAG"; then
     echo "ERROR: restic backup failed" >&2
     exit 1
 fi
