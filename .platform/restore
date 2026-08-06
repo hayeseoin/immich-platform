@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# --- Must be run as root ---
+if [[ $EUID -ne 0 ]]; then
+    echo "ERROR: This script must be run as root (sudo)." >&2
+    exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# --- Load environment ---
+source /home/svc-platform/.config/platform/restic.env
+source "$APP_DIR/.env"
+
+# --- Accept restore directory as argument or prompt ---
+if [[ $# -ge 1 ]]; then
+    RESTORE_DIR="$1"
+else
+    echo "Enter the path to the restic restore target directory"
+    echo "(i.e. the <dir> you passed to: restic restore <id> --target <dir>):"
+    read -r RESTORE_DIR
+fi
+
+# --- Validate restore directory ---
+# restic restores into <target>/var/tmp/backup-<tag>/...
+TAG="${RESTIC_TAG:-$APP_NAME}"
+RESTORE_ROOT="$RESTORE_DIR/var/tmp/backup-${TAG}"
+
+if [[ ! -d "$RESTORE_ROOT" ]]; then
+    echo "ERROR: Expected restore payload not found at: $RESTORE_ROOT" >&2
+    echo "Contents of $RESTORE_DIR:" >&2
+    find "$RESTORE_DIR" -maxdepth 3 -type d 2>/dev/null || true
+    exit 1
+fi
+
+if [[ ! -f "$RESTORE_ROOT/db.sql" ]]; then
+    echo "ERROR: db.sql not found in $RESTORE_ROOT" >&2
+    exit 1
+fi
+
+if [[ ! -d "$RESTORE_ROOT/library" ]]; then
+    echo "ERROR: library directory not found in $RESTORE_ROOT" >&2
+    exit 1
+fi
+
+# --- Confirmation ---
+echo ""
+echo "=== IMMICH RESTORE ==="
+echo "Restore source:  $RESTORE_ROOT"
+echo "App directory:   $APP_DIR"
+echo ""
+echo "This will:"
+echo "  1. Stop all Immich containers"
+echo "  2. DESTROY the current library at: $APP_DIR/library"
+echo "  3. DESTROY the current database at: $APP_DIR/postgres"
+echo "  4. Restore library and database from backup"
+echo "  5. Restart Immich"
+echo ""
+read -r -p "Are you sure you want to proceed? [y/N] " confirm
+if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "Restore cancelled."
+    exit 0
+fi
+
+# --- Stop containers ---
+echo ""
+echo ">>> Stopping containers..."
+docker compose -f "$APP_DIR/compose.yml" --env-file "$APP_DIR/.env" down
+
+# --- Destroy and restore library ---
+echo ">>> Removing current library..."
+rm -rf "$APP_DIR/library"
+
+echo ">>> Restoring library from backup..."
+cp -a "$RESTORE_ROOT/library" "$APP_DIR/library"
+
+# --- Destroy and restore database ---
+echo ">>> Removing current database..."
+rm -rf "$APP_DIR/postgres"
+mkdir -p "$APP_DIR/postgres"
+
+# Start only the database container to perform the restore
+echo ">>> Starting database container..."
+docker compose -f "$APP_DIR/compose.yml" --env-file "$APP_DIR/.env" up -d database
+
+# Wait for postgres to be ready
+echo ">>> Waiting for database to be ready..."
+until docker compose -f "$APP_DIR/compose.yml" --env-file "$APP_DIR/.env" exec database pg_isready -U postgres > /dev/null 2>&1; do
+    sleep 1
+done
+sleep 2
+
+# Restore the database dump
+echo ">>> Restoring database from dump..."
+if ! docker compose -f "$APP_DIR/compose.yml" --env-file "$APP_DIR/.env" exec -T database psql -U postgres < "$RESTORE_ROOT/db.sql"; then
+    echo "ERROR: Database restore failed" >&2
+    exit 1
+fi
+
+# --- Start all services ---
+echo ">>> Starting all containers..."
+docker compose -f "$APP_DIR/compose.yml" --env-file "$APP_DIR/.env" up -d
+
+echo ""
+echo "=== Restore complete ==="
+echo "Verify Immich is running: docker compose -f $APP_DIR/compose.yml ps"
