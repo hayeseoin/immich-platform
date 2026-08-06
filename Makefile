@@ -9,5 +9,5 @@ help: ## Show list of commands
 	@echo ""
 
 .PHONY: backup
-setup: ## Create stack
+backup: ## Create backup
 	@.platform/backup
