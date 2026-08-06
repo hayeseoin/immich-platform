@@ -20,7 +20,7 @@ fi
 cp -a "$APP_DIR/library" "$BACKUP_TMP/library"
 
 # --- Back up ---
-if ! restic backup "$BACKUP_TMP" --tag "$TAG"; then
+if ! restic backup "$BACKUP_TMP/*" --tag "$TAG"; then
     echo "ERROR: restic backup failed" >&2
     exit 1
 fi
