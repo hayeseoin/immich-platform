@@ -11,3 +11,7 @@ help: ## Show list of commands
 .PHONY: backup
 backup: ## Create backup
 	@.platform/backup
+
+.PHONY: restore
+restore: ## Create backup
+	@.platform/restore
