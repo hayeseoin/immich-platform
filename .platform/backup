@@ -9,6 +9,7 @@ source /home/svc-platform/.config/platform/restic.env
 source "$APP_DIR/.env"
 
 # --- Create backup tmp directory --- #
+TAG="${RESTIC_TAG:-$APP_NAME}"
 BACKUP_TMP="/var/tmp/backup-${TAG}"
 rm -rf "$BACKUP_TMP"
 mkdir -p "$BACKUP_TMP"
