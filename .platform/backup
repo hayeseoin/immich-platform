@@ -20,7 +20,7 @@ if ! docker compose -p "${COMPOSE_PROJECT_NAME}" exec database pg_dumpall -U pos
     echo "ERROR: database dump failed" >&2
     exit 1
 fi
-cp -a "$APP_DIR/library" "$BACKUP_TMP/library"
+cp -a "$UPLOAD_LOCATION" "$BACKUP_TMP/"
 
 # --- Back up ---
 if ! restic backup "$BACKUP_TMP" --tag "$TAG"; then
