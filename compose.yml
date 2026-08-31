@@ -23,8 +23,8 @@ services:
       - .env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.${APP_NAME}.rule=Host(`${APP_HOSTNAME}`)"
-      - "traefik.http.routers.${APP_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.${APP_NAME:-immich}.rule=Host(`${APP_HOSTNAME:-immich.nhay.es}`)"
+      - "traefik.http.routers.${APP_NAME:-immich}.entrypoints=websecure"
       - "traefik.docker.network=platform"    
     depends_on:
       - redis
@@ -72,7 +72,7 @@ services:
       # DB_STORAGE_TYPE: 'HDD'
     volumes:
       # Do not edit the next line. If you want to change the database storage location on your system, edit the value of DB_DATA_LOCATION in the .env file
-      - ${DB_DATA_LOCATION}:/var/lib/postgresql/data:z
+      - ./postgres:/var/lib/postgresql/data:z
     shm_size: 128mb
     restart: always
     healthcheck:
