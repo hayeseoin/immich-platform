@@ -53,7 +53,7 @@ echo "App directory:   $APP_DIR"
 echo ""
 echo "This will:"
 echo "  1. Stop all Immich containers"
-echo "  2. DESTROY the current library at: $APP_DIR/library"
+echo "  2. DESTROY the current library at: $UPLOAD_LOCATION"
 echo "  3. DESTROY the current database at: $APP_DIR/postgres"
 echo "  4. Restore library and database from backup"
 echo "  5. Restart Immich"
@@ -71,10 +71,10 @@ docker compose -f "$APP_DIR/compose.yml" --env-file "$APP_DIR/.env" down
 
 # --- Destroy and restore library ---
 echo ">>> Removing current library..."
-rm -rf "$APP_DIR/library"
+rm -rf "$UPLOAD_LOCATION"
 
 echo ">>> Restoring library from backup..."
-cp -a "$RESTORE_ROOT/library" "$APP_DIR/library"
+cp -a "$RESTORE_ROOT/library" "$UPLOAD_LOCATION"
 
 # --- Destroy and restore database ---
 echo ">>> Removing current database..."
