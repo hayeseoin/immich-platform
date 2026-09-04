@@ -8,4 +8,4 @@ source "$APP_DIR/.env"
 
 mkdir -p "$UPLOAD_LOCATION"
 
-docker compose -f "$APP_DIR/compose.yml" -d
+docker compose -f "$APP_DIR/compose.yml" up -d
