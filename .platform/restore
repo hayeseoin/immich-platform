@@ -99,7 +99,7 @@ sleep 2
 
 # Restore the database dump
 echo ">>> Restoring database from dump..."
-if ! docker compose -f "$APP_DIR/compose.yml" --env-file "$APP_DIR/.env" exec -T database psql -U postgres < "$DB_DUMP"; then
+if ! docker compose -f "$APP_DIR/compose.yml" --env-file "$APP_DIR/.env" exec -T database psql -U postgres < "$DB_DUMP" > /dev/null 2>&1; then
     echo "ERROR: Database restore failed" >&2
     exit 1
 fi
