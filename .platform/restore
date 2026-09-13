@@ -6,7 +6,8 @@ if [[ $EUID -ne 0 ]]; then
     echo "ERROR: This script must be run as root (sudo)." >&2
     exit 1
 fi
-
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # --- Platform-provided environment ---
 RESTIC_REPO="${1:-local.env}"
 source "/home/svc-platform/.config/platform/restic/${RESTIC_REPO}"
