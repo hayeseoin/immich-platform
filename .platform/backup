@@ -5,7 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # --- Platform-provided environment ---
-source /home/svc-platform/.config/platform/restic.env
+RESTIC_REPO="${1:-local.env}"
+source "/home/svc-platform/.config/platform/restic/${REPO_NAME}"
 source "$APP_DIR/.env"
 
 # --- Create backup tmp directory --- #
