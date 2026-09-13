@@ -11,10 +11,6 @@ fi
 RESTIC_REPO="${1:-local.env}"
 source "/home/svc-platform/.config/platform/restic/${RESTIC_REPO}"
 
-# --- Load environment ---
-source /home/svc-platform/.config/platform/restic.env
-source "$APP_DIR/.env"
-
 # --- Accept restore directory as argument or prompt ---
 if [[ $# -ge 1 ]]; then
     RESTORE_DIR="$1"
