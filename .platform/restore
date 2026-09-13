@@ -10,7 +10,6 @@ fi
 # --- Platform-provided environment ---
 RESTIC_REPO="${1:-local.env}"
 source "/home/svc-platform/.config/platform/restic/${RESTIC_REPO}"
-source "$APP_DIR/.env"
 
 # --- Load environment ---
 source /home/svc-platform/.config/platform/restic.env
