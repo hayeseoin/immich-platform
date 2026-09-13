@@ -9,22 +9,28 @@ RESTIC_REPO="${1:-local.env}"
 source "/home/svc-platform/.config/platform/restic/${RESTIC_REPO}"
 source "$APP_DIR/.env"
 
-# --- Create backup tmp directory --- #
+# --- Create backup tmp directory (db dump only; library is backed up directly) --- #
 TAG="${RESTIC_TAG:-$APP_NAME}"
 BACKUP_TMP="/var/tmp/backup-${TAG}"
 rm -rf "$BACKUP_TMP"
 mkdir -p "$BACKUP_TMP"
 trap 'rm -rf "$BACKUP_TMP"' EXIT
 
+# Resolve UPLOAD_LOCATION to the absolute path compose actually mounts, so
+# restic stores a clean absolute path the restore script can reconstruct.
+case "$UPLOAD_LOCATION" in
+    /*) UPLOAD_ABS="$UPLOAD_LOCATION" ;;
+    *) UPLOAD_ABS="$APP_DIR/${UPLOAD_LOCATION#./}" ;;
+esac
+
 # --- Dump data ---
 if ! docker compose -p "${COMPOSE_PROJECT_NAME}" exec database pg_dumpall -U postgres > "$BACKUP_TMP/db.sql"; then
     echo "ERROR: database dump failed" >&2
     exit 1
 fi
-cp -a "$UPLOAD_LOCATION" "$BACKUP_TMP/"
 
 # --- Back up ---
-if ! restic backup "$BACKUP_TMP" --tag "$TAG"; then
+if ! restic backup "$BACKUP_TMP/db.sql" "$UPLOAD_ABS" --tag "$TAG"; then
     echo "ERROR: restic backup failed" >&2
     exit 1
 fi

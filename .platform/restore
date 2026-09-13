@@ -24,36 +24,40 @@ else
 fi
 
 # --- Validate restore directory ---
-# restic restores into <target>/var/tmp/backup-<tag>/...
+# restic restores each backed-up path under <target> at its original
+# absolute path, so db.sql and the library land at two separate locations.
 TAG="${RESTIC_TAG:-$APP_NAME}"
-RESTORE_ROOT="$RESTORE_DIR/var/tmp/backup-${TAG}"
 
-if [[ ! -d "$RESTORE_ROOT" ]]; then
-    echo "ERROR: Expected restore payload not found at: $RESTORE_ROOT" >&2
+case "$UPLOAD_LOCATION" in
+    /*) UPLOAD_ABS="$UPLOAD_LOCATION" ;;
+    *) UPLOAD_ABS="$APP_DIR/${UPLOAD_LOCATION#./}" ;;
+esac
+
+DB_DUMP="$RESTORE_DIR/var/tmp/backup-${TAG}/db.sql"
+LIBRARY_RESTORE="$RESTORE_DIR$UPLOAD_ABS"
+
+if [[ ! -f "$DB_DUMP" ]]; then
+    echo "ERROR: db.sql not found at: $DB_DUMP" >&2
     echo "Contents of $RESTORE_DIR:" >&2
-    find "$RESTORE_DIR" -maxdepth 3 -type d 2>/dev/null || true
+    find "$RESTORE_DIR" -maxdepth 5 -type d 2>/dev/null || true
     exit 1
 fi
 
-if [[ ! -f "$RESTORE_ROOT/db.sql" ]]; then
-    echo "ERROR: db.sql not found in $RESTORE_ROOT" >&2
-    exit 1
-fi
-
-if [[ ! -d "$RESTORE_ROOT/library" ]]; then
-    echo "ERROR: library directory not found in $RESTORE_ROOT" >&2
+if [[ ! -d "$LIBRARY_RESTORE" ]]; then
+    echo "ERROR: library directory not found at: $LIBRARY_RESTORE" >&2
     exit 1
 fi
 
 # --- Confirmation ---
 echo ""
 echo "=== IMMICH RESTORE ==="
-echo "Restore source:  $RESTORE_ROOT"
+echo "Database dump:   $DB_DUMP"
+echo "Library source:  $LIBRARY_RESTORE"
 echo "App directory:   $APP_DIR"
 echo ""
 echo "This will:"
 echo "  1. Stop all Immich containers"
-echo "  2. DESTROY the current library at: $UPLOAD_LOCATION"
+echo "  2. DESTROY the current library at: $UPLOAD_ABS"
 echo "  3. DESTROY the current database at: $APP_DIR/postgres"
 echo "  4. Restore library and database from backup"
 echo "  5. Restart Immich"
@@ -71,10 +75,10 @@ docker compose -f "$APP_DIR/compose.yml" --env-file "$APP_DIR/.env" down
 
 # --- Destroy and restore library ---
 echo ">>> Removing current library..."
-rm -rf "$UPLOAD_LOCATION"
+rm -rf "$UPLOAD_ABS"
 
 echo ">>> Restoring library from backup..."
-cp -a "$RESTORE_ROOT/library" "$UPLOAD_LOCATION"
+cp -a "$LIBRARY_RESTORE" "$UPLOAD_ABS"
 
 # --- Destroy and restore database ---
 echo ">>> Removing current database..."
@@ -94,7 +98,7 @@ sleep 2
 
 # Restore the database dump
 echo ">>> Restoring database from dump..."
-if ! docker compose -f "$APP_DIR/compose.yml" --env-file "$APP_DIR/.env" exec -T database psql -U postgres < "$RESTORE_ROOT/db.sql"; then
+if ! docker compose -f "$APP_DIR/compose.yml" --env-file "$APP_DIR/.env" exec -T database psql -U postgres < "$DB_DUMP"; then
     echo "ERROR: Database restore failed" >&2
     exit 1
 fi
